@@ -1,10 +1,9 @@
 /*
  * STM34L4x_spi_driver.c
  *
- *  Created on: Jul. 14, 2020
+ *  Created on: Aug. 14, 2020
  *      Author: Avinash
  */
-
 
 #include "STM32L4x_spi_driver.h"
 
@@ -30,7 +29,6 @@ void SPI_PclkCtrl(SPI_RegDef_t *pSPIx, uint8_t EnOrDi)
 		{
 			SPI1_PCLK_DI();
 		}
-
 	}
 }
 
@@ -38,7 +36,6 @@ void SPI_PclkCtrl(SPI_RegDef_t *pSPIx, uint8_t EnOrDi)
 void SPI_Init(SPI_Handle_t *pSPIHandle)
 {
 	uint32_t temp= 0;
-
 
 	//Enable SPI peripheral clock*
 	SPI_PclkCtrl(pSPIHandle->pSPIx,ENABLE);
@@ -104,7 +101,6 @@ void SPI_Init(SPI_Handle_t *pSPIHandle)
 
 uint8_t SPI_GetFlagStatus(SPI_RegDef_t *pSPIx, uint32_t FlagName)
 {
-
 	if(pSPIx->SR & FlagName)
 	{
 		return FLAG_SET;
@@ -223,17 +219,15 @@ void SPI_IRQITConfig(uint8_t IRQNumber,uint8_t EnOrDi)
 		if(IRQNumber <=31)
 		{
 			*NVIC_ISER0 |= (1 << IRQNumber);
-
 		}
 
 		else if (IRQNumber > 31 && IRQNumber < 64)
 		{
 			*NVIC_ISER1 |= (1 << ( IRQNumber % 32 ));
-
 		}
 		else if (IRQNumber >=64 && IRQNumber < 96)
 		{
-			*NVIC_ISER3 |= (1 << ( IRQNumber % 64 ));
+			*NVIC_ISER2 |= (1 << ( IRQNumber % 64 ));
 		}
 	}
 	else
@@ -249,10 +243,9 @@ void SPI_IRQITConfig(uint8_t IRQNumber,uint8_t EnOrDi)
 		}
 		else if (IRQNumber >=64 && IRQNumber < 96)
 		{
-			*NVIC_ICER3 |= (1 << ( IRQNumber % 64 ));
+			*NVIC_ICER2 |= (1 << ( IRQNumber % 64 ));
 		}
 	}
-
 }
 
 
@@ -282,7 +275,6 @@ void SPI_IRQHandling(SPI_Handle_t *pHandle)
 	{
 			spi_ovr_interrupt_handle(pHandle);
 	}
-
 }
 
 uint8_t SPI_SendDataIT(SPI_Handle_t *pSPIHandle, uint8_t *pTxBuffer,uint8_t Len)
@@ -299,11 +291,7 @@ uint8_t SPI_SendDataIT(SPI_Handle_t *pSPIHandle, uint8_t *pTxBuffer,uint8_t Len)
 		pSPIHandle->pSPIx->CR2|= ( 1 << SPI_CR2_TXEIE);
 
 	}
-
-
 	return state;
-
-
 }
 uint8_t SPI_RecieveDataIT(SPI_Handle_t *pSPIHandle, uint8_t *pRxBuffer,uint8_t Len)
 {
@@ -316,7 +304,6 @@ uint8_t SPI_RecieveDataIT(SPI_Handle_t *pSPIHandle, uint8_t *pRxBuffer,uint8_t L
 
 		//Enable the RXNEIE control bit to get interrupt when RX flag is set in SR
 		pSPIHandle->pSPIx->CR2|= ( 1 << SPI_CR2_RXNEIE);
-
 	}
 	return state;
 }
@@ -346,11 +333,9 @@ static void spi_txe_interrupt_handle(SPI_Handle_t *pSPIHandle)
 		SPI_CloseTransmission(pSPIHandle);
 		SPI_ApplicationEvenCallback(pSPIHandle,SPI_EVENT_TX_CMPLT);
 	}
-
 }
 static void spi_rxne_interrupt_handle(SPI_Handle_t *pSPIHandle)
 {
-
 	//Check data length settings
 	if(SPI_GetDataLen(pSPIHandle->pSPIx) == SPI_DFF_16BITS)
 	{
@@ -374,7 +359,6 @@ static void spi_rxne_interrupt_handle(SPI_Handle_t *pSPIHandle)
 		SPI_ApplicationEvenCallback(pSPIHandle,SPI_EVENT_RX_CMPLT);
 
 	}
-
 }
 static void spi_ovr_interrupt_handle(SPI_Handle_t *pSPIHandle)
 {
@@ -425,7 +409,6 @@ void SPI_IRQPriorityConfig(uint8_t IRQNumber, uint32_t IRQPriority)
 
 	*(NVIC_PR_BASE_ADDR + iprx_register) &= ~( 0xF << shift_amount);/*clear bits before setting*/
 	*(NVIC_PR_BASE_ADDR + iprx_register) |= ( IRQPriority << shift_amount);
-
 }
 
 __attribute__((weak)) void SPI_ApplicationEvenCallback(SPI_Handle_t *pSPIHandle,uint8_t AppEv)

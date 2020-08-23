@@ -1,7 +1,7 @@
 /*
  * STM32L4x_i2c_driver.h
  *
- *  Created on: Jul. 18, 2020
+ *  Created on: Aug. 18, 2020
  *      Author: Avinash
  */
 
@@ -40,8 +40,6 @@ typedef struct
 	uint8_t	 I2C_SCLH;
 	uint8_t	 I2C_SCLL;
 	uint8_t	 I2C_DeviceAddr;
-
-
 }I2C_Config_t;
 
 
@@ -57,19 +55,6 @@ typedef struct
 	I2CState TxRxState;
 	uint8_t DevAddr;
 }I2C_Handle_t;
-
-/*@I2C_SCLSpeed*/
-#define I2C_SCL_SPEED_SM 100000
-#define I2C_SCL_SPEED_FM4K 400000
-#define I2C_SCL_SPEED_SM2K 200000
-
-/*@I2C_ACKCntrl*/
-#define I2C_ACK_ENABLE		1
-#define I2C_ACK_DISABLE		0
-
-/*@I2C_FMDutyCycle*/
-#define I2C_FM_DUTY_2
-#define I2C_FM_DUTY_16_9
 
 /*************************************************************************
 *Bit position definitions of I2C peripheral
@@ -177,9 +162,9 @@ typedef struct
 
 /*I2C Interrupts*/
 #define IRQ_NO_I2C1_EV 		31
-
-
-
+#define IRQ_NO_I2C1_ER 		32
+#define IRQ_NO_I2C3_EV 		72
+#define IRQ_NO_I2C3_ER 		73
 
 void I2C_PeripheralControl(I2C_RegDef_t *pI2Cx, uint8_t EnOrDi);
 
@@ -190,34 +175,25 @@ void I2C_PclkCtrl(I2C_RegDef_t *pI2Cx, uint8_t EnOrDi);
 void I2C_Init(I2C_Handle_t *pI2CHandle);
 void I2C_DeIit(I2C_RegDef_t *pI2Cx);
 
+/*Interrupt configuration and interrupt flag status*/
 void I2C_ITCntrl(I2C_RegDef_t *pI2Cx,uint8_t interrupt ,uint8_t EnOrDi);
-
-uint8_t  I2C_MasterSendDataIT(I2C_Handle_t *pI2CHandle,uint8_t *pTxBuffer, uint32_t size, uint8_t SlaveAddr);
-uint8_t  I2C_MasterRecieveDataIT(I2C_Handle_t *pI2CHandle,uint8_t *pRxBuffer, uint32_t size, uint8_t SlaveAddr);
-uint8_t  I2C_SlaveRecieveDataIT(I2C_Handle_t *pI2CHandle,uint8_t *pRxBuffer, uint32_t size);
-uint8_t  I2C_SlaveSendDataIT(I2C_Handle_t *pI2CHandle,uint8_t *pRxBuffer, uint32_t size);
-
-
-uint8_t I2C_MasterSendData(I2C_RegDef_t *pI2Cx, uint8_t *pTxbuffer, uint8_t size,uint8_t SlaveAddr);
-void I2C_MasterRecieveData(I2C_RegDef_t *pI2Cx, uint8_t *pRxbuffer, uint8_t size,uint8_t SlaveAddr);
 uint8_t I2C_GetFlagStatus(I2C_RegDef_t *pSPIx, uint32_t FlagName);
-
 void I2C_IRQITConfig(uint8_t IRQNumber,uint8_t EnOrDi);
 void I2C_IRQPriorityConfig(uint8_t IRQNumber, uint8_t IRQPriority);
-
-
-void transmitReadyEvent(I2C_Handle_t *pI2CHandle);
-
-
 void I2CReadStatusFlag(I2C_RegDef_t *pI2Cx);
-void I2C_SetsFlag(I2C_RegDef_t *pI2Cx);
 uint8_t getI2CFlag(void);
+
+/*Data read and write*/
+uint8_t I2C_MasterSendDataIT(I2C_Handle_t *pI2CHandle,uint8_t *pTxBuffer, uint32_t size, uint8_t SlaveAddr);
+uint8_t I2C_MasterRecieveDataIT(I2C_Handle_t *pI2CHandle,uint8_t *pRxBuffer, uint32_t size, uint8_t SlaveAddr);
+uint8_t I2C_SlaveRecieveDataIT(I2C_Handle_t *pI2CHandle,uint8_t *pRxBuffer, uint32_t size);
+uint8_t I2C_SlaveSendDataIT(I2C_Handle_t *pI2CHandle,uint8_t *pRxBuffer, uint32_t size);
+
+/*I2C interrupts events*/
+void transmitReadyEvent(I2C_Handle_t *pI2CHandle);
 void addressMatchEvent(I2C_RegDef_t *pI2Cx);
 void recieverBufferFullEvent(I2C_Handle_t *pI2CHandle);
 void stopFlagEvent(I2C_Handle_t *pI2CHandle);
 void nackEvent(I2C_Handle_t *pI2CHandle);
-
-
-uint32_t RCC_GetPCLK1Val(void);
 
 #endif /* INC_STM32L4X_I2C_DRIVER_H_ */

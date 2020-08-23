@@ -1,7 +1,7 @@
 /*
  * STM32L432xx.h
  *
- *  Created on: Jul 13, 2020
+ *  Created on: Aug 13, 2020
  *      Author: Avinash
  */
 #include <stdint.h>

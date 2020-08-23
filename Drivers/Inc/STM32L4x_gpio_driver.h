@@ -5,8 +5,8 @@
  *      Author: Avinash
  */
 
-#ifndef INC_STM32L432X_GPIO_DRIVER_H_
-#define INC_STM32L432X_GPIO_DRIVER_H_
+#ifndef INC_STM32L4X_GPIO_DRIVER_H_
+#define INC_STM32L4X_GPIO_DRIVER_H_
 
 #include "STM32L432xx.h"
 
@@ -81,4 +81,4 @@ void GPIO_IRQITConfig(uint8_t IRQNumber,uint8_t EnOrDi);
 void GPIO_IRQHandling(uint8_t PinNumber);
 
 
-#endif /* INC_STM32L432X_GPIO_DRIVER_H_ */
+#endif /* INC_STM32L4X_GPIO_DRIVER_H_ */

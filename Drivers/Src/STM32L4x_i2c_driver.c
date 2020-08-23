@@ -1,12 +1,14 @@
+/*
+ * STM32L4x_i2c_driver.c
+ *
+ *  Created on: Aug. 14, 2020
+ *      Author: Avinash
+ */
 #include "STM32L4x_i2c_driver.h"
 #include "STM32L432xx.h"
 
 static void I2C_Start(I2C_RegDef_t *pI2Cx,uint8_t direction, uint8_t SlaveAddr, uint8_t size);
 static I2CState checkI2CBus(I2C_RegDef_t *pI2Cx);
-
-
-static const uint16_t PreScaler[] ={2,4,8,16,64,128,256,512};
-
 static IT_EV ITFlag;
 static uint8_t dataDir;
 uint8_t tsize;
@@ -156,7 +158,7 @@ void I2C_IRQITConfig(uint8_t IRQNumber,uint8_t EnOrDi)
 		}
 		else if (IRQNumber >=64 && IRQNumber < 96)
 		{
-			*NVIC_ISER3 |= (1 << ( IRQNumber % 64 ));
+			*NVIC_ISER2 |= (1 << ( IRQNumber % 64 ));
 		}
 	}
 	else
@@ -172,7 +174,7 @@ void I2C_IRQITConfig(uint8_t IRQNumber,uint8_t EnOrDi)
 		}
 		else if (IRQNumber >=64 && IRQNumber < 96)
 		{
-			*NVIC_ICER3 |= (1 << ( IRQNumber % 64 ));
+			*NVIC_ICER2 |= (1 << ( IRQNumber % 64 ));
 		}
 	}
 

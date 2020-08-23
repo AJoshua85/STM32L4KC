@@ -1,11 +1,11 @@
 /*
- * STM32x_gpio_driver.c
+ * STM32L4x_gpio_driver.c
  *
  *  Created on: Jul. 14, 2020
  *      Author: Avinash
  */
 
-#include "STM32L432x_gpio_driver.h"
+#include <STM32L4x_gpio_driver.h>
 
 /*******************************************************************
  * @fn				- GPIO_PclkCtr
@@ -297,7 +297,7 @@ void GPIO_IRQITConfig(uint8_t IRQNumber,uint8_t EnOrDi)
 		}
 		else if (IRQNumber >=64 && IRQNumber < 96)
 		{
-			*NVIC_ISER3 |= (1 << ( IRQNumber % 64 ));
+			*NVIC_ISER2 |= (1 << ( IRQNumber % 64 ));
 		}
 	}
 	else
@@ -313,7 +313,7 @@ void GPIO_IRQITConfig(uint8_t IRQNumber,uint8_t EnOrDi)
 		}
 		else if (IRQNumber >=64 && IRQNumber < 96)
 		{
-			*NVIC_ICER3 |= (1 << ( IRQNumber % 64 ));
+			*NVIC_ICER2 |= (1 << ( IRQNumber % 64 ));
 		}
 	}
 
