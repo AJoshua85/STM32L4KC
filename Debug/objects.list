@@ -1,0 +1,7 @@
+"Drivers/Src/STM32L4x_i2c_driver.o"
+"Drivers/Src/STM32x_gpio_driver.o"
+"Drivers/Src/STM34L4x_spi_driver.o"
+"Src/MasterTransRecv.o"
+"Src/syscalls.o"
+"Src/sysmem.o"
+"Startup/startup_stm32l432kcux.o"
