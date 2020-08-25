@@ -14,7 +14,7 @@
  *
  */
 
-#define     	((volatile uint32_t*)0xE000E100)
+#define NVIC_ISER0     	((volatile uint32_t*)0xE000E100)
 #define NVIC_ISER1  	((volatile uint32_t*)0xE000E104)
 #define NVIC_ISER2  	((volatile uint32_t*)0xE000E108)
 #define NVIC_ISER3 		((volatile uint32_t*)0xE000E10C)
@@ -176,7 +176,7 @@ typedef struct
 /* peripheral register definition structure for I2C Register*/
 typedef struct
 {
-	volatile uint32_t CR1;/*I2C control register 1*/
+	volatile uint32_t CR1;/**/
 	volatile uint32_t CR2;/*I2C control register 2*/
 	volatile uint32_t OAR1;/*I2C own address 1 register*/
 	volatile uint32_t OAR2;/*I2C own address 2 register*/
