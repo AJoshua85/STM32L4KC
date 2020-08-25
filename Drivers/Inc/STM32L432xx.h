@@ -14,7 +14,7 @@
  *
  */
 
-#define NVIC_ISER0  	((volatile uint32_t*)0xE000E100)
+#define     	((volatile uint32_t*)0xE000E100)
 #define NVIC_ISER1  	((volatile uint32_t*)0xE000E104)
 #define NVIC_ISER2  	((volatile uint32_t*)0xE000E108)
 #define NVIC_ISER3 		((volatile uint32_t*)0xE000E10C)
@@ -162,34 +162,50 @@ typedef struct
 /* peripheral register definition structure for SPI Register*/
 typedef struct
 {
-	volatile uint32_t CR1;
-	volatile uint32_t CR2;
-	volatile uint32_t SR;
-	volatile uint32_t DR;
-	volatile uint16_t reserved;
-	volatile uint32_t CRCPR;
-	volatile uint32_t RXCRCR;
-	volatile uint32_t TXCRCR;
+	volatile uint32_t CR1;/*SPI control register 1*/
+	volatile uint32_t CR2;/*SPI control register 2*/
+	volatile uint32_t SR;/*SPI status register*/
+	volatile uint32_t DR;/*SPI data register*/
+	volatile uint16_t reserved;/**/
+	volatile uint32_t CRCPR;/*SPI CRC polynomial register*/
+	volatile uint32_t RXCRCR;/*SPI Rx CRC register*/
+	volatile uint32_t TXCRCR;/*SPI Tx CRC register*/
 
 }SPI_RegDef_t;
 
 /* peripheral register definition structure for I2C Register*/
 typedef struct
 {
-	volatile uint32_t CR1;
-	volatile uint32_t CR2;
-	volatile uint32_t OAR1;
-	volatile uint32_t OAR2;
-	volatile uint32_t TIMINGR;
-	volatile uint32_t TIMEOUTR;
-	volatile uint32_t ISR;
-	volatile uint32_t ICR;
-	volatile uint32_t PECR;
-	volatile uint32_t RXDR;
-	volatile uint32_t TXDR;
-
-
+	volatile uint32_t CR1;/*I2C control register 1*/
+	volatile uint32_t CR2;/*I2C control register 2*/
+	volatile uint32_t OAR1;/*I2C own address 1 register*/
+	volatile uint32_t OAR2;/*I2C own address 2 register*/
+	volatile uint32_t TIMINGR;/*I2C timing register*/
+	volatile uint32_t TIMEOUTR;/*I2C timeout register*/
+	volatile uint32_t ISR;/*I2C interrupt and status register*/
+	volatile uint32_t ICR;/*I2C interrupt clear register*/
+	volatile uint32_t PECR;/*I2C PEC register*/
+	volatile uint32_t RXDR;/*I2C receive data register*/
+	volatile uint32_t TXDR;/*I2C transmit data register*/
 }I2C_RegDef_t;
+
+/* peripheral register definition structure for USART Register*/
+typedef struct
+{
+	volatile uint32_t CR1;/*Control register 1*/
+	volatile uint32_t CR2;/*Control register 2*/
+	volatile uint32_t CR3;/*Control register 3*/
+	volatile uint32_t BRR;/*Baud rate register*/
+	volatile uint32_t GTPR;/*Guard time and prescaler register*/
+	volatile uint32_t RTOR;/*Receiver timeout register*/
+	volatile uint32_t RQR;/*Request register*/
+	volatile uint32_t ISR;/*Interrupt and status register*/
+	volatile uint32_t ICR;/*Interrupt flag clear register*/
+	volatile uint32_t RDR;/*Receive data register*/
+	volatile uint32_t TDR;/*Transmit data register*/
+}USART_RegDef_t;
+
+/* peripheral register definition structure for I2C Register*/
 
 /*  peripheral definitions (Peripheral base addresses typecasted to xxx_RegDef_t*/
 #define GPIOA					( (GPIO_RegDef_t*) GPIOA_BASEADDR )
