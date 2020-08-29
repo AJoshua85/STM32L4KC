@@ -11,8 +11,6 @@ static void I2C_Start(I2C_RegDef_t *pI2Cx,uint8_t direction, uint8_t SlaveAddr, 
 static I2CState checkI2CBus(I2C_RegDef_t *pI2Cx);
 static IT_EV ITFlag;
 static uint8_t dataDir;
-uint8_t tsize;
-
 /*******************************************************************
  * @fn				-  I2C_PclkCtrl
  *
