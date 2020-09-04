@@ -14,14 +14,12 @@ static uint8_t SPI_GetDataLen(SPI_RegDef_t *pSPIx);
 
 void SPI_PclkCtrl(SPI_RegDef_t *pSPIx, uint8_t EnOrDi)
 {
-
 	if(EnOrDi == ENABLE)
 	{
 		if(pSPIx == SPI)
 		{
 			SPI1_PCLK_EN();
 		}
-
 	}
 	else if (EnOrDi == DISABLE)
 	{
