@@ -20,7 +20,16 @@ static void USART_SetBaudRate(USART_RegDef_t *pUSARTx, uint32_t BaudRate);
 static void USART_ReceiveReady(USART_Handle_t *pUSARTHandle);
 static void USART_TransmitReady(USART_Handle_t *pUSARTHandle);
 static void USART_EndTransmit(USART_Handle_t *pUSARTHandle);
-
+/*******************************************************************
+ * @fn				-  USART_PclkCtrl
+ *
+ * @brief			- this function enables the USART peripheral clock
+ *
+ * @parem[in]		- base address of the USART peripheral
+ * @parem[in]	    - enable or disable
+ * @return			- none
+ * @note			- none
+ */
 void USART_PclkCtrl(USART_RegDef_t *pUSARTx, uint8_t EnOrDi)
 {
 	if(EnOrDi == ENABLE)
@@ -38,7 +47,16 @@ void USART_PclkCtrl(USART_RegDef_t *pUSARTx, uint8_t EnOrDi)
 		}
 	}
 }
-
+/*******************************************************************
+ * @fn				-  USART_PeripheralControl
+ *
+ * @brief			- this function enables the USART peripheral
+ *
+ * @parem[in]		- base address of the USART peripheral
+ * @parem[in]	    - enable or disable
+ * @return			- none
+ * @note			- none
+ */
 void USART_PeripheralControl(USART_RegDef_t *pUSARTx, uint8_t EnOrDi)
 {
 	if(EnOrDi== ENABLE)
@@ -47,11 +65,11 @@ void USART_PeripheralControl(USART_RegDef_t *pUSARTx, uint8_t EnOrDi)
 	}
 	else if(EnOrDi == DISABLE)
 	{
-
+		while(!USART_GetFlagStatus(pUSARTx,USART_TC_FLAG));
+		pUSARTx->CR1 &= ~(1 <<USART_CR1_UE);
 	}
 
 }
-
 /*******************************************************************
  * @fn				- USART_Init
  *
