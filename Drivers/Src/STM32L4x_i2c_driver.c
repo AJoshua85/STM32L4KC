@@ -9,13 +9,23 @@
 
 static void I2C_Start(I2C_RegDef_t *pI2Cx,uint8_t direction, uint8_t SlaveAddr, uint8_t size);
 static I2CState checkI2CBus(I2C_RegDef_t *pI2Cx);
+static void I2C_ReadStatusFlag(I2C_RegDef_t *pI2Cx);
+
+/*I2C interrupts events*/
+static void I2C_transmitReadyEvent(I2C_Handle_t *pI2CHandle);
+static void I2C_addressMatchEvent(I2C_RegDef_t *pI2Cx);
+static void I2C_recieverBufferFullEvent(I2C_Handle_t *pI2CHandle);
+static void I2C_stopFlagEvent(I2C_Handle_t *pI2CHandle);
+static void I2C_nackEvent(I2C_Handle_t *pI2CHandle);
+
 static I2C_IT_EV ITFlag;
 static uint8_t dataDir;
 /*******************************************************************
  * @fn				-  I2C_PclkCtrl
  *
- * @brief			- this function enables I2C peripheral clock
- * @parem[in]		- base address of of I2C peripheral
+ * @brief			- this function enables the I2C peripheral clock
+ *
+ * @parem[in]		- base address of the I2C peripheral
  * @parem[in]	    - enable or disable
  * @return			- none
  * @note			- none
@@ -49,8 +59,9 @@ void I2C_PclkCtrl(I2C_RegDef_t *pI2Cx, uint8_t EnOrDi)
 /*******************************************************************
  * @fn				-  I2C_PeripheralControl
  *
- * @brief			- this function enables I2C peripheral
- * @parem[in]		- base address of of I2C peripheral
+ * @brief			- this function enables the I2C peripheral
+ *
+ * @parem[in]		- base address of the I2C peripheral
  * @parem[in]	    - enable or disable
  * @return			- none
  * @note			- none
@@ -71,8 +82,9 @@ void I2C_PeripheralControl(I2C_RegDef_t *pI2Cx, uint8_t EnOrDi)
 /*******************************************************************
  * @fn				- I2C_Init
  *
- * @brief			- this function configures the I2C peripheral timings
- * 					  and device address
+ * @brief			- this function configures the I2C
+ * 					  peripheral timings and device address
+ *
  * @parem[in]		- I2C Configuration handle
  * @return			- none
  * @note			- none
@@ -106,38 +118,11 @@ void I2C_Init(I2C_Handle_t *pI2CHandle)
  	pI2CHandle->TxRxState=I2C_READY;
  }
 /*******************************************************************
- * @fn				- I2C_Start
- *
- * @brief			- this function initiates the start condition for I2C transmission
- * @parem[in]		- base address of of I2C peripheral
- * @parem[in]		- read or write access for the I2C slave
- * @parem[in]		- slave address
- * @parem[in]		- number of bytes to be sent
- * @return			- none
- * @note			- none
- */
-static void I2C_Start(I2C_RegDef_t *pI2Cx,uint8_t direction, uint8_t SlaveAddr, uint8_t size)
-{
-	uint32_t tempreg = pI2Cx->CR2;
-	if(direction == I2C_MASTER_WR)
-	{
-		tempreg &= ~(1 << I2C_CR2_RD_WRN);
-	}
-	else if (direction == I2C_MASTER_RD)
-	{
-		tempreg |= (1 << I2C_CR2_RD_WRN);
-	}
-
-	//Clear address Field and length field
-	tempreg &= ~ ( (0x3FF) | (0xFF << 16) );
-	tempreg |= (SlaveAddr << 1)|(size << 16);
-	tempreg |=  (1 << I2C_CR2_START);
-	pI2Cx->CR2 = tempreg;
-}
-/*******************************************************************
  * @fn				- I2C_IRQITConfig
  *
- * @brief			- this function enable or disable interrupt for given interrupt
+ * @brief			- this function enables or disables
+ * 					  interrupt in the NVIC
+ *
  * @parem[in]		- IRQ number
  * @parem[in]		- enable or disable
  * @return			- none
@@ -181,7 +166,9 @@ void I2C_IRQITConfig(uint8_t IRQNumber,uint8_t EnOrDi)
 /*******************************************************************
  * @fn				- I2C_IRQPriorityConfig
  *
- * @brief			- this function configure the priority of the I2C interrupt
+ * @brief			- this function configure the
+ * 					  priority of the I2C interrupt
+ *
  * @parem[in]		- I2C IRQ number
  * @parem[in]		- IRQ priority to be set
  * @return			- none
@@ -191,21 +178,24 @@ void I2C_IRQPriorityConfig(uint8_t IRQNumber, uint8_t IRQPriority)
 {
 	uint8_t iprx_register = IRQNumber / 4;
 	uint8_t iprx_section = IRQNumber % 4;
-	uint8_t shift_amount = (8 * iprx_section) + (8-NO_PR_BITS_IMPLEMENTED);// This may vary depending on manufacture implementation
 
-	*(NVIC_PR_BASE_ADDR + (iprx_register *4)) &= ~( 0xF << shift_amount);//clear bits before setting
+	// The # of PR bits may vary depending on manufacture implementation
+	uint8_t shift_amount = (8 * iprx_section) + (8-NO_PR_BITS_IMPLEMENTED);
+
+	*(NVIC_PR_BASE_ADDR + (iprx_register *4)) &= ~( 0xF << shift_amount);
 	*(NVIC_PR_BASE_ADDR + (iprx_register *4)) |= ( IRQPriority << shift_amount);
 }
 /*******************************************************************
  * @fn				- I2C_ITCntrl
  *
- * @brief			- this function sends data to I2C bus via an interrupt
+ * @brief			- this function enables the I2C peripheral interrupts
  *
- * @parem[in]		- base address of of I2C peripheral
+ * @parem[in]		- base address of the I2C peripheral
  * @parem[in]		- interrupt mask for a given interrupt
  * @parem[in]		- enable or disable
- * @return
- * @note			This function can enable/disable multiple interrupts by combining the masks together
+ * @return			- none
+ * @note			- This function can enable/disable
+ * 					  multiple interrupts by combining the masks together
  */
 void I2C_ITCntrl(I2C_RegDef_t *pI2Cx,uint8_t interrupt ,uint8_t EnOrDi)
 {
@@ -318,8 +308,10 @@ void I2C_ITCntrl(I2C_RegDef_t *pI2Cx,uint8_t interrupt ,uint8_t EnOrDi)
 /*******************************************************************
  * @fn				- I2C_GetFlagStatus
  *
- * @brief			- reads the ISR register to determine which interrupt has occurred
- * @parem[in]		- base address of of I2C peripheral
+ * @brief			- reads the ISR register to determine which
+ * 					  interrupt has occurred
+ *
+ * @parem[in]		- base address of the I2C peripheral
  * @parem[in]		- Interrupt to check
  * @return			- FLAG_SET or FLAG_RESET
  * @note			- none
@@ -336,12 +328,14 @@ uint8_t I2C_GetFlagStatus(I2C_RegDef_t *pI2Cx, uint32_t FlagName)
 /*******************************************************************
  * @fn				- I2CReadStatusFlag
  *
- * @brief			- checks to see which interrupt has occurred and sets ITFlag
- * @parem[in]		- base address of of I2C peripheral
+ * @brief			- checks to see which interrupt has occurred
+ * 					  and sets the ITFlag
+ *
+ * @parem[in]		- base address of the I2C peripheral
  * @return			- none
  * @note			- none
  */
-void I2C_ReadStatusFlag(I2C_RegDef_t *pI2Cx)
+static void I2C_ReadStatusFlag(I2C_RegDef_t *pI2Cx)
 {
 	if(I2C_GetFlagStatus(pI2Cx,I2C_ADDR_FLAG))
 	{
@@ -368,14 +362,46 @@ void I2C_ReadStatusFlag(I2C_RegDef_t *pI2Cx)
 	}
 }
 /*******************************************************************
- * @fn				- addressMatchEvent
+ * @fn				- I2C_Start
  *
- * @brief			- this function acknowledges ADDR interrupt
+ * @brief			- this function initiates the start condition
+ * 					  for the I2C transmission
+ *
  * @parem[in]		- base address of of I2C peripheral
+ * @parem[in]		- read or write access for the I2C slave
+ * @parem[in]		- slave address
+ * @parem[in]		- number of bytes to be sent
  * @return			- none
  * @note			- none
  */
-void I2C_addressMatchEvent(I2C_RegDef_t *pI2Cx)
+static void I2C_Start(I2C_RegDef_t *pI2Cx,uint8_t direction, uint8_t SlaveAddr, uint8_t size)
+{
+	uint32_t tempreg = pI2Cx->CR2;
+	if(direction == I2C_MASTER_WR)
+	{
+		tempreg &= ~(1 << I2C_CR2_RD_WRN);
+	}
+	else if (direction == I2C_MASTER_RD)
+	{
+		tempreg |= (1 << I2C_CR2_RD_WRN);
+	}
+
+	//Clear address Field and length field
+	tempreg &= ~ ( (0x3FF) | (0xFF << 16) );
+	tempreg |= (SlaveAddr << 1)|(size << 16);
+	tempreg |=  (1 << I2C_CR2_START);
+	pI2Cx->CR2 = tempreg;
+}
+/*******************************************************************
+ * @fn				- addressMatchEvent
+ *
+ * @brief			- this function acknowledges ADDR interrupt
+ *
+ * @parem[in]		- base address of the I2C peripheral
+ * @return			- none
+ * @note			- none
+ */
+static void I2C_addressMatchEvent(I2C_RegDef_t *pI2Cx)
 {
 	//Write transfer
 	if((pI2Cx->ISR) & I2C_DIR_FLAG)
@@ -395,14 +421,13 @@ void I2C_addressMatchEvent(I2C_RegDef_t *pI2Cx)
 /*******************************************************************
  * @fn				- recieverBufferFullEvent
  *
- * @brief			- this function acknowledges RXNE interrupt and reads the data
- * 					  from the I2C Bus
+ * @brief			- this function acknowledges RXNE interrupt
  *
  * @parem[in]		- I2C Configuration Handle
  * @return			- none
  * @note			- none
  */
-void I2C_recieverBufferFullEvent(I2C_Handle_t *pI2CHandle)
+static void I2C_recieverBufferFullEvent(I2C_Handle_t *pI2CHandle)
 {
 	if(pI2CHandle->TxRxState == I2C_BUSY_IN_RX_MASTER)
 	{
@@ -429,7 +454,7 @@ void I2C_recieverBufferFullEvent(I2C_Handle_t *pI2CHandle)
 	}
 }
 /*******************************************************************
- * @fn				- stopFlagEvent
+ * @fn				- I2C_stopFlagEvent
  *
  * @brief			- this function acknowledges STOPF interrupt
  *
@@ -437,7 +462,7 @@ void I2C_recieverBufferFullEvent(I2C_Handle_t *pI2CHandle)
  * @return			- none
  * @note			- none
  */
-void I2C_stopFlagEvent(I2C_Handle_t *pI2CHandle)
+static void I2C_stopFlagEvent(I2C_Handle_t *pI2CHandle)
 {
 	//Clear stop flag interrupt
 	pI2CHandle->pI2Cx->ICR |= 1 << I2C_ICR_STOPCF;
@@ -453,7 +478,7 @@ void I2C_stopFlagEvent(I2C_Handle_t *pI2CHandle)
 	pI2CHandle->TxRxState= I2C_READY;
 }
 /*******************************************************************
- * @fn				- nackEvent
+ * @fn				- I2C_nackEvent
  *
  * @brief			- this function acknowledges NACKF interrupt
  *
@@ -461,7 +486,7 @@ void I2C_stopFlagEvent(I2C_Handle_t *pI2CHandle)
  * @return			- none
  * @note			- none
  */
-void I2C_nackEvent(I2C_Handle_t *pI2CHandle)
+static void I2C_nackEvent(I2C_Handle_t *pI2CHandle)
 {
 
 	//Master transmit failed
@@ -499,16 +524,15 @@ void I2C_nackEvent(I2C_Handle_t *pI2CHandle)
 	}
 }
 /*******************************************************************
- * @fn				- transmitReadyEvent
+ * @fn				- I2C_transmitReadyEvent
  *
- * @brief			- this function acknowledges TXIS interrupt and transfers data
- * 					  to the I2C bus
+ * @brief			- this function acknowledges TXIS interrupt
  *
  * @parem[in]		- I2C Configuration handle
  * @return			- none
  * @note			- none
  */
-void I2C_transmitReadyEvent(I2C_Handle_t *pI2CHandle)
+static void I2C_transmitReadyEvent(I2C_Handle_t *pI2CHandle)
 {
 	uint8_t temp =3;
 
@@ -527,7 +551,7 @@ void I2C_transmitReadyEvent(I2C_Handle_t *pI2CHandle)
 			}
 		}
 		else
-		{
+		{	//Length mismatch for debugging purpose
 			pI2CHandle->pI2Cx->TXDR = temp;
 		}
 	}
@@ -540,7 +564,7 @@ void I2C_transmitReadyEvent(I2C_Handle_t *pI2CHandle)
 			pI2CHandle->TxLen--;
 		}
 		else
-		{
+		{	//Length mismatch for debugging purpose
 			pI2CHandle->pI2Cx->TXDR = temp;
 		}
 
@@ -549,11 +573,12 @@ void I2C_transmitReadyEvent(I2C_Handle_t *pI2CHandle)
 /*******************************************************************
  * @fn				- I2C_MasterSendDataIT
  *
- * @brief			- this function transmits data to the I2C bus via an interrupt
+ * @brief			- this function initializes the peripheral
+ * 					  to transmits data via an interrupt
  *
  * @parem[in]		- I2C Configuration handle
  * @parem[in]		- transmit buffer
- * @parem[in]		- length of transmit buffer
+ * @parem[in]		- length of the transmit buffer
  * @parem[in]		- Slave address
  * @return			- SUCCESS or FAIL
  * @note			- none
@@ -574,11 +599,12 @@ uint8_t I2C_MasterSendDataIT(I2C_Handle_t *pI2CHandle,uint8_t *pTxBuffer, uint8_
 /*******************************************************************
  * @fn				- I2C_MasterReceiveDataIT
  *
- * @brief			- this function receives data to the I2C bus via an interrupt
+ * @brief			- this function initializes the peripheral
+ * 					  to receives data via an interrupt
  *
  * @parem[in]		- I2C Configuration handle
  * @parem[in]		- receive buffer
- * @parem[in]		- length of receive buffer
+ * @parem[in]		- length of the receive buffer
  * @parem[in]		- slave address
  * @return			- SUCCESS or FAIL
  * @note			- none
@@ -599,11 +625,12 @@ uint8_t I2C_MasterReceiveDataIT(I2C_Handle_t *pI2CHandle,uint8_t *pRxBuffer, uin
 /*******************************************************************
  * @fn				- I2C_SlaveReceiveDataIT
  *
- * @brief			- this function receives data to the I2C bus via an interrupt
+ * @brief			- this function initializes the peripheral
+ * 					  to receives data via an interrupt
  *
  * @parem[in]		- I2C Configuration handle
  * @parem[in]		- receive buffer
- * @parem[in]		- length of receive buffer
+ * @parem[in]		- length of the receive buffer
  * @return			- SUCCESS or FAIL
  * @note			- none
  */
@@ -622,11 +649,12 @@ uint8_t I2C_SlaveReceiveDataIT(I2C_Handle_t *pI2CHandle,uint8_t *pRxBuffer, uint
 /*******************************************************************
  * @fn				- I2C_SlaveSendDataIT
  *
- * @brief			- this function sends data to the I2C bus via an interrupt
+ * @brief			- this function initializes the peripheral
+ * 					  to sends data via an interrupt
  *
  * @parem[in]		- I2C Configuration handle
  * @parem[in]		- transmit buffer
- * @parem[in]		- length of transmit buffer
+ * @parem[in]		- length of the transmit buffer
  * @return			- SUCCESS or FAIL
  * @note			- none
  */
@@ -667,7 +695,7 @@ static I2CState checkI2CBus(I2C_RegDef_t *pI2Cx)
  * @brief			- this function acknowledges the interrupts
  *
  * @parem[in]		- I2C Configuration handle
- * @return			-
+ * @return			- none
  * @note			- none
  */
 void I2C_IRQHandling(I2C_Handle_t *pI2CHandle)

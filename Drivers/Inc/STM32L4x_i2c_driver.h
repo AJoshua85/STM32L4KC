@@ -14,11 +14,11 @@
 typedef enum
 {
 	ADDRMATCH,
-	RXEREADY,
+	I2C_RXEREADY,
 	STOPBIT,
 	NACKF,
-	TXISREADY
-}IT_EV;
+	I2C_TXISREADY
+}I2C_IT_EV;
 
 /*I2C Status*/
 typedef enum
@@ -166,6 +166,10 @@ typedef struct
 #define IRQ_NO_I2C3_EV 		72
 #define IRQ_NO_I2C3_ER 		73
 
+/*****************************************************************************
+ * 						APIs supported by this driver
+ * 		For more information about the APIs check the function definitions
+ *****************************************************************************/
 void I2C_PeripheralControl(I2C_RegDef_t *pI2Cx, uint8_t EnOrDi);
 
 /*Peripheral Clock setup*/
@@ -180,20 +184,13 @@ void I2C_ITCntrl(I2C_RegDef_t *pI2Cx,uint8_t interrupt ,uint8_t EnOrDi);
 uint8_t I2C_GetFlagStatus(I2C_RegDef_t *pSPIx, uint32_t FlagName);
 void I2C_IRQITConfig(uint8_t IRQNumber,uint8_t EnOrDi);
 void I2C_IRQPriorityConfig(uint8_t IRQNumber, uint8_t IRQPriority);
-void I2CReadStatusFlag(I2C_RegDef_t *pI2Cx);
-uint8_t getI2CFlag(void);
+void I2C_IRQHandling(I2C_Handle_t *pI2CHandle);
 
 /*Data read and write*/
-uint8_t I2C_MasterSendDataIT(I2C_Handle_t *pI2CHandle,uint8_t *pTxBuffer, uint32_t size, uint8_t SlaveAddr);
-uint8_t I2C_MasterRecieveDataIT(I2C_Handle_t *pI2CHandle,uint8_t *pRxBuffer, uint32_t size, uint8_t SlaveAddr);
-uint8_t I2C_SlaveRecieveDataIT(I2C_Handle_t *pI2CHandle,uint8_t *pRxBuffer, uint32_t size);
-uint8_t I2C_SlaveSendDataIT(I2C_Handle_t *pI2CHandle,uint8_t *pRxBuffer, uint32_t size);
+uint8_t I2C_MasterSendDataIT(I2C_Handle_t *pI2CHandle,uint8_t *pTxBuffer, uint8_t len, uint8_t SlaveAddr);
+uint8_t I2C_MasterReceiveDataIT(I2C_Handle_t *pI2CHandle,uint8_t *pRxBuffer, uint8_t len, uint8_t SlaveAddr);
+uint8_t I2C_SlaveReceiveDataIT(I2C_Handle_t *pI2CHandle,uint8_t *pRxBuffer, uint8_t len);
+uint8_t I2C_SlaveSendDataIT(I2C_Handle_t *pI2CHandle,uint8_t *pRxBuffer, uint8_t len);
 
-/*I2C interrupts events*/
-void transmitReadyEvent(I2C_Handle_t *pI2CHandle);
-void addressMatchEvent(I2C_RegDef_t *pI2Cx);
-void recieverBufferFullEvent(I2C_Handle_t *pI2CHandle);
-void stopFlagEvent(I2C_Handle_t *pI2CHandle);
-void nackEvent(I2C_Handle_t *pI2CHandle);
 
 #endif /* INC_STM32L4X_I2C_DRIVER_H_ */

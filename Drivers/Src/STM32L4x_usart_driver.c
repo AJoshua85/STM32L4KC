@@ -12,10 +12,16 @@ uint8_t txenum = 0;
 uint8_t rxenum = 0;
 uint8_t end= 0;
 static USART_IT_EV ITFlag;
-static UARTState USART_checkRxBus(USART_RegDef_t *pUSARTx);
-void static USART_SetBaudRate(USART_RegDef_t *pUSARTx, uint32_t BaudRate);
 
-void USART_PclkControl(USART_RegDef_t *pUSARTx, uint8_t EnOrDi)
+static UARTState USART_checkRxBus(USART_RegDef_t *pUSARTx);
+static void USART_SetBaudRate(USART_RegDef_t *pUSARTx, uint32_t BaudRate);
+
+/*USART interrupt events*/
+static void USART_ReceiveReady(USART_Handle_t *pUSARTHandle);
+static void USART_TransmitReady(USART_Handle_t *pUSARTHandle);
+static void USART_EndTransmit(USART_Handle_t *pUSARTHandle);
+
+void USART_PclkCtrl(USART_RegDef_t *pUSARTx, uint8_t EnOrDi)
 {
 	if(EnOrDi == ENABLE)
 	{
@@ -45,18 +51,21 @@ void USART_PeripheralControl(USART_RegDef_t *pUSARTx, uint8_t EnOrDi)
 	}
 
 }
+
 /*******************************************************************
  * @fn				- USART_Init
  *
- * @brief			- this function configures USART peripheral settings
- * @parem[in]		- base address of of I2C peripheral
+ * @brief			- this function configures USART
+ * 					  peripheral settings
+ *
+ * @parem[in]		- base address of the USART peripheral
  * @return			- none
  * @note			- none
  */
 void USART_Init(USART_Handle_t *pUSARTHandle)
 {
 	uint32_t tempreg= pUSARTHandle->pUSARTx->CR1;
-	USART_PclkControl(pUSARTHandle->pUSARTx,ENABLE);
+	USART_PclkCtrl(pUSARTHandle->pUSARTx,ENABLE);
 
 	/*****************Configure CR1 Register************************/
 	//Configure USART Tx and Rx
@@ -187,15 +196,177 @@ void USART_Init(USART_Handle_t *pUSARTHandle)
 
 }
 /*******************************************************************
+ * @fn				- USART_IRQITConfig
+ *
+ * @brief			- this function enables or disables interrupt
+ * 					  in the NVIC
+ *
+ * @parem[in]		- IRQ number
+ * @parem[in]		- enable or disable
+ * @return			- none
+ * @note			- none
+ */
+void USART_IRQITConfig(uint8_t IRQNumber,uint8_t EnOrDi)
+{
+	if (EnOrDi == ENABLE)
+	{
+		if(IRQNumber <=31)
+		{
+			*NVIC_ISER0 |= (1 << IRQNumber);
+		}
+		else if (IRQNumber > 31 && IRQNumber < 64)
+		{
+			*NVIC_ISER1 |= (1 << ( IRQNumber % 32 ));
+		}
+		else if (IRQNumber >=64 && IRQNumber < 96)
+		{
+			*NVIC_ISER2 |= (1 << ( IRQNumber % 64 ));
+		}
+	}
+	else
+	{
+		if(IRQNumber <=31)
+		{
+			*NVIC_ICER0 |= (1 << IRQNumber);
+		}
+
+		else if (IRQNumber > 31 && IRQNumber < 64)
+		{
+			*NVIC_ICER1 |= (1 << ( IRQNumber % 32 ));
+		}
+		else if (IRQNumber >=64 && IRQNumber < 96)
+		{
+			*NVIC_ICER2 |= (1 << ( IRQNumber % 64 ));
+		}
+	}
+}
+/*******************************************************************
+ * @fn				- USART_IRQPriorityConfig
+ *
+ * @brief			- this function configure the priority of
+ * 					  the USART interrupt
+ *
+ * @parem[in]		- USART IRQ number
+ * @parem[in]		- IRQ priority to be set
+ * @return			- none
+ * @note			- none
+ */
+void USART_IRQPriorityConfig(uint8_t IRQNumber, uint8_t IRQPriority)
+{
+	uint8_t iprx_register = IRQNumber / 4;
+	uint8_t iprx_section = IRQNumber % 4;
+	uint8_t shift_amount = (8 * iprx_section) + (8-NO_PR_BITS_IMPLEMENTED);// This may vary depending on manufacture implementation
+
+	*(NVIC_PR_BASE_ADDR + (iprx_register *4)) &= ~( 0xF << shift_amount);//clear bits before setting
+	*(NVIC_PR_BASE_ADDR + (iprx_register *4)) |= ( IRQPriority << shift_amount);
+}
+/*******************************************************************
+ * @fn				- USART_ITCntrl
+ *
+ * @brief			- this function enables  USART peripheral interrupts
+ *
+ * @parem[in]		- base address of the USART peripheral
+ * @parem[in]		- interrupt mask for a given interrupt
+ * @parem[in]		- enable or disable
+ * @return			- none
+ * @note			- This function can enable/disable multiple interrupts
+ * 					  by combining the masks together
+ */
+void USART_ITCntrl(USART_RegDef_t *pUSARTx,uint8_t interrupt ,uint8_t EnOrDi)
+{
+
+	if(pUSARTx == USART1)
+	{
+		if(interrupt & USART_RXNEIE_IT && EnOrDi== ENABLE)
+		{
+			pUSARTx->CR1 |= USART_RXNEIE_IT;
+		}
+		else if(interrupt & USART_RXNEIE_IT && EnOrDi== DISABLE)
+		{
+			pUSARTx->CR1 &= ~(USART_RXNEIE_IT);
+		}
+		if(interrupt & USART_TCIE_IT && EnOrDi== ENABLE)
+		{
+			pUSARTx->CR1 |= USART_TCIE_IT;
+		}
+		else if(interrupt & USART_TCIE_IT && EnOrDi== DISABLE)
+		{
+			pUSARTx->CR1 &= ~(USART_TCIE_IT);
+		}
+		if(interrupt & USART_TXEIE_IT && EnOrDi== ENABLE)
+		{
+			pUSARTx->CR1 |= USART_TXEIE_IT;
+		}
+		else if(interrupt & USART_TXEIE_IT && EnOrDi== DISABLE)
+		{
+			pUSARTx->CR1 &= ~(USART_TXEIE_IT);
+		}
+		if(interrupt & USART_PEIE_IT && EnOrDi== ENABLE)
+		{
+			pUSARTx->CR1 |= USART_PEIE_IT;
+		}
+		else if(interrupt & USART_PEIE_IT&& EnOrDi== DISABLE)
+		{
+			pUSARTx->CR1 &= ~(USART_PEIE_IT);
+		}
+	}
+}
+/*******************************************************************
+ * @fn				- USART_GetFlagStatus
+ *
+ * @brief			- reads the ISR register to determine
+ * 					  which interrupt has occurred
+ *
+ * @parem[in]		- base address of the USART peripheral
+ * @parem[in]		- Interrupt to check
+ * @return			- FLAG_SET or FLAG_RESET
+ * @note			- none
+ */
+uint8_t USART_GetFlagStatus(USART_RegDef_t *pUSARTx, uint32_t FlagName)
+{
+	if(pUSARTx->ISR & FlagName)
+	{
+		return FLAG_SET;
+	}
+	return FLAG_RESET;
+}
+/*******************************************************************
+ * @fn				- USART_ReadStatusFlag
+ *
+ * @brief			- checks to see which interrupt has occurred
+ * 					  and sets the ITFlag
+ *
+ * @parem[in]		- base address of USART peripheral
+ * @return			- none
+ * @note			- none
+ */
+void USART_ReadStatusFlag(USART_RegDef_t *pUSARTx)
+{
+	//Check to see if the interrupt is enabled and flag is set
+	if( USART_GetFlagStatus(pUSARTx,USART_RXNE_FLAG) && (pUSARTx->CR1 & USART_RXNEIE_IT))
+	{
+		ITFlag = USART_RXEREADY;
+	}
+	else if( USART_GetFlagStatus(pUSARTx, USART_TXE_FLAG) && (pUSARTx->CR1 & USART_TXEIE_IT))
+	{
+		ITFlag = USART_TXISREADY;
+	}
+	else if( USART_GetFlagStatus(pUSARTx, USART_TC_FLAG) && (pUSARTx->CR1 & USART_TCIE_IT))
+	{
+		ITFlag = ENDTX;
+	}
+}
+/*******************************************************************
  * @fn				- USART_SetBaudRate
  *
  * @brief			- this function configures the baud rate
- * @parem[in]		- base address of of USART peripheral
+ *
+ * @parem[in]		- base address of the USART peripheral
  * 					- baud rate
  * @return			- none
  * @note			- none
  */
-void static USART_SetBaudRate(USART_RegDef_t *pUSARTx, uint32_t BaudRate)
+static void USART_SetBaudRate(USART_RegDef_t *pUSARTx, uint32_t BaudRate)
 {
 	uint64_t temp;
 	uint32_t usartdiv;
@@ -219,17 +390,17 @@ void static USART_SetBaudRate(USART_RegDef_t *pUSARTx, uint32_t BaudRate)
 	}
 	pUSARTx->BRR= usartdiv;
 }
+
 /*******************************************************************
  * @fn				- USART_TransmitReady
  *
- * @brief			- this function acknowledges RXNE interrupt
- * 					  and transfers data
- * @parem[in]		- USART Configuration handle
+ * @brief			- this function acknowledges TXE interrupt
  *
+ * @parem[in]		- USART Configuration handle
  * @return			- none
  * @note			- none
  */
-void USART_TransmitReady(USART_Handle_t *pUSARTHandle)
+static void USART_TransmitReady(USART_Handle_t *pUSARTHandle)
 {
 	txenum++;
 	uint16_t *pdata;
@@ -283,14 +454,13 @@ void USART_TransmitReady(USART_Handle_t *pUSARTHandle)
 /*******************************************************************
  * @fn				- USART_ReceiveReady
  *
- * @brief			- this function acknowledges TXE interrupt
- * 					  and transfer data into UART bus
- * @parem[in]		- USART Configuration handle
+ * @brief			- this function acknowledges RXNE interrupt
  *
+ * @parem[in]		- USART Configuration handle
  * @return			- none
  * @note			- none
  */
-void USART_ReceiveReady(USART_Handle_t *pUSARTHandle)
+static void USART_ReceiveReady(USART_Handle_t *pUSARTHandle)
 {
 	if(pUSARTHandle->RxBusyState == USART_BUSY)
 	{
@@ -354,16 +524,17 @@ void USART_ReceiveReady(USART_Handle_t *pUSARTHandle)
 		}
 	}
 }
-/**************************************************************************************
+/*******************************************************************
  * @fn				- USART_EndTransmit
  *
- * @brief			- this function acknowledges TC interrupt and disables TXE interrupt
- * @parem[in]		- USART Configuration handle
+ * @brief			- this function acknowledges TC interrupt
+ * 					  and disables TXE interrupt
  *
+ * @parem[in]		- USART Configuration handle
  * @return			- none
  * @note			- none
  */
-void USART_EndTransmit(USART_Handle_t *pUSARTHandle)
+static void USART_EndTransmit(USART_Handle_t *pUSARTHandle)
 {
 	end++;
 	USART_ITCntrl(pUSARTHandle->pUSARTx,USART_TCIE_IT|USART_TXEIE_IT,DISABLE);
@@ -372,14 +543,15 @@ void USART_EndTransmit(USART_Handle_t *pUSARTHandle)
 	pUSARTHandle->TxBusyState = USART_READY;
 
 }
-/**************************************************************************************
+/*******************************************************************
  * @fn				- USART_SendData
  *
- * @brief			- this function transfers data through polling method
+ * @brief			- this function transfers data
+ * 					  through polling method
+ *
  * @parem[in]		- USART Configuration handle
  * 					- Transmit buffer
  * 					- length of the transmit buffer
- *
  * @return			- none
  * @note			- none
  */
@@ -426,14 +598,15 @@ void USART_SendData(USART_Handle_t *pUSARTHandle,uint8_t *pTxBuffer, uint8_t len
 	}
 	while(!(pUSARTHandle->pUSARTx->ISR & USART_TC_FLAG));
 }
-/**************************************************************************************
+/*******************************************************************
  * @fn				- USART_ReceiveData
  *
- * @brief			- this function receives data through polling method
+ * @brief			- this function receives data
+ * 					  through polling method
+ *
  * @parem[in]		- USART Configuration handle
  * 					- Transmit buffer
  * 					- length of the receiver buffer
- *
  * @return			- none
  * @note			- none
  */
@@ -486,10 +659,10 @@ void USART_ReceiveData(USART_Handle_t *pUSARTHandle,uint8_t *pRxBuffer, uint8_t 
  * @fn				- USART_SendDataIT
  *
  * @brief			- this function transfers data through interrupt
+ *
  * @parem[in]		- USART Configuration handle
  * 					- Transmit buffer
  * 					- length of the transmit buffer
- *
  * @return			- SUCCESS or FAIL
  * @note			- none
  */
@@ -508,11 +681,11 @@ uint8_t USART_SendDataIT(USART_Handle_t *pUSARTHandle,uint8_t *pTxBuffer, uint8_
 /**************************************************************************************
  * @fn				- USART_ReceiveDataIT
  *
- * @brief			- this function receives data through polling method
- * @parem[in]		- USART Configuration handle
- * 					- Transmit buffer
- * 					- length of the receiver buffer
+ * @brief			- this function receives data through interrupt
  *
+ * @parem[in]		- USART Configuration handle
+ * 					- receive buffer
+ * 					- length of the receive buffer
  * @return			- SUCCESS or FAIL
  * @note			- none
  */
@@ -528,97 +701,22 @@ uint8_t USART_ReceiveDataIT(USART_Handle_t *pUSARTHandle,uint8_t *pRxBuffer, uin
 	}
 	return FAIL;
 }
-
 /*******************************************************************
- * @fn				- USART_ITCntrl
+ * @fn				- USART_checkRxBus
  *
- * @brief			- this function sends data to USART bus via an interrupt
+ * @brief			- this function checks USART rx bus is free
  *
- * @parem[in]		- base address of of USART peripheral
- * @parem[in]		- interrupt mask for a given interrupt
- * @parem[in]		- enable or disable
- * @return
- * @note			This function can enable/disable multiple interrupts by combining the masks together
- */
-void USART_ITCntrl(USART_RegDef_t *pUSARTx,uint8_t interrupt ,uint8_t EnOrDi)
-{
-
-	if(pUSARTx == USART1)
-	{
-		if(interrupt & USART_RXNEIE_IT && EnOrDi== ENABLE)
-		{
-			pUSARTx->CR1 |= USART_RXNEIE_IT;
-		}
-		else if(interrupt & USART_RXNEIE_IT && EnOrDi== DISABLE)
-		{
-			pUSARTx->CR1 &= ~(USART_RXNEIE_IT);
-		}
-		if(interrupt & USART_TCIE_IT && EnOrDi== ENABLE)
-		{
-			pUSARTx->CR1 |= USART_TCIE_IT;
-		}
-		else if(interrupt & USART_TCIE_IT && EnOrDi== DISABLE)
-		{
-			pUSARTx->CR1 &= ~(USART_TCIE_IT);
-		}
-		if(interrupt & USART_TXEIE_IT && EnOrDi== ENABLE)
-		{
-			pUSARTx->CR1 |= USART_TXEIE_IT;
-		}
-		else if(interrupt & USART_TXEIE_IT && EnOrDi== DISABLE)
-		{
-			pUSARTx->CR1 &= ~(USART_TXEIE_IT);
-		}
-		if(interrupt & USART_PEIE_IT && EnOrDi== ENABLE)
-		{
-			pUSARTx->CR1 |= USART_PEIE_IT;
-		}
-		else if(interrupt & USART_PEIE_IT&& EnOrDi== DISABLE)
-		{
-			pUSARTx->CR1 &= ~(USART_PEIE_IT);
-		}
-	}
-}
-/*******************************************************************
- * @fn				- USART_ReadStatusFlag
- *
- * @brief			- checks to see which interrupt has occurred and sets ITFlag
  * @parem[in]		- base address of of USART peripheral
  * @return			- none
  * @note			- none
  */
-void USART_ReadStatusFlag(USART_RegDef_t *pUSARTx)
+static UARTState USART_checkRxBus(USART_RegDef_t *pUSARTx)
 {
-	//Check to see if the interrupt is enabled and flag is set
-	if( USART_GetFlagStatus(pUSARTx,USART_RXNE_FLAG) && (pUSARTx->CR1 & USART_RXNEIE_IT))
+	if(USART_GetFlagStatus(pUSARTx,USART_BUSY_FLAG))
 	{
-		ITFlag = USART_RXEREADY;
+		return USART_BUSY;
 	}
-	else if( USART_GetFlagStatus(pUSARTx, USART_TXE_FLAG) && (pUSARTx->CR1 & USART_TXEIE_IT))
-	{
-		ITFlag = USART_TXISREADY;
-	}
-	else if( USART_GetFlagStatus(pUSARTx, USART_TC_FLAG) && (pUSARTx->CR1 & USART_TCIE_IT))
-	{
-		ITFlag = ENDTX;
-	}
-}
-/*******************************************************************
- * @fn				- USART_GetFlagStatus
- *
- * @brief			- reads the ISR register to determine which interrupt has occurred
- * @parem[in]		- base address of of USART peripheral
- * @parem[in]		- Interrupt to check
- * @return			- FLAG_SET or FLAG_RESET
- * @note			- none
- */
-uint8_t USART_GetFlagStatus(USART_RegDef_t *pUSARTx, uint32_t FlagName)
-{
-	if(pUSARTx->ISR & FlagName)
-	{
-		return FLAG_SET;
-	}
-	return FLAG_RESET;
+	return USART_READY;
 }
 /*******************************************************************
  * @fn				- USART_IRQHandling
@@ -645,80 +743,4 @@ void USART_IRQHandling(USART_Handle_t *pUSARTHandle)
 		USART_ReceiveReady(pUSARTHandle);
 	}
 }
-/*******************************************************************
- * @fn				- USART_IRQITConfig
- *
- * @brief			- this function enable or disable interrupt for given interrupt
- * @parem[in]		- IRQ number
- * @parem[in]		- enable or disable
- * @return			- none
- * @note			- none
- */
-void USART_IRQITConfig(uint8_t IRQNumber,uint8_t EnOrDi)
-{
-	if (EnOrDi == ENABLE)
-	{
-		if(IRQNumber <=31)
-		{
-			*NVIC_ISER0 |= (1 << IRQNumber);
-		}
-		else if (IRQNumber > 31 && IRQNumber < 64)
-		{
-			*NVIC_ISER1 |= (1 << ( IRQNumber % 32 ));
-		}
-		else if (IRQNumber >=64 && IRQNumber < 96)
-		{
-			*NVIC_ISER2 |= (1 << ( IRQNumber % 64 ));
-		}
-	}
-	else
-	{
-		if(IRQNumber <=31)
-		{
-			*NVIC_ICER0 |= (1 << IRQNumber);
-		}
 
-		else if (IRQNumber > 31 && IRQNumber < 64)
-		{
-			*NVIC_ICER1 |= (1 << ( IRQNumber % 32 ));
-		}
-		else if (IRQNumber >=64 && IRQNumber < 96)
-		{
-			*NVIC_ICER2 |= (1 << ( IRQNumber % 64 ));
-		}
-	}
-}
-/*******************************************************************
- * @fn				- USART_IRQPriorityConfig
- *
- * @brief			- this function configure the priority of the I2C interrupt
- * @parem[in]		- I2C IRQ number
- * @parem[in]		- IRQ priority to be set
- * @return			- none
- * @note			- none
- */
-void USART_IRQPriorityConfig(uint8_t IRQNumber, uint8_t IRQPriority)
-{
-	uint8_t iprx_register = IRQNumber / 4;
-	uint8_t iprx_section = IRQNumber % 4;
-	uint8_t shift_amount = (8 * iprx_section) + (8-NO_PR_BITS_IMPLEMENTED);// This may vary depending on manufacture implementation
-
-	*(NVIC_PR_BASE_ADDR + (iprx_register *4)) &= ~( 0xF << shift_amount);//clear bits before setting
-	*(NVIC_PR_BASE_ADDR + (iprx_register *4)) |= ( IRQPriority << shift_amount);
-}
-/*******************************************************************
- * @fn				- USART_checkRxBus
- *
- * @brief			- this function checks USART rx line is free
- * @parem[in]		- base address of of USART peripheral
- * @return			- none
- * @note			- none
- */
-static UARTState USART_checkRxBus(USART_RegDef_t *pUSARTx)
-{
-	if(USART_GetFlagStatus(pUSARTx,USART_BUSY_FLAG))
-	{
-		return USART_BUSY;
-	}
-	return USART_READY;
-}

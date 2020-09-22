@@ -262,7 +262,7 @@ typedef struct
  *****************************************************************************/
 
 /*Peripheral Clock setup */
-void USART_PclkControl(USART_RegDef_t *pUSARTx, uint8_t EnOrDi);
+void USART_PclkCtrl(USART_RegDef_t *pUSARTx, uint8_t EnOrDi);
 
 void USART_PeripheralControl(USART_RegDef_t *pUSARTx, uint8_t EnOrDi);
 
@@ -274,8 +274,8 @@ void USART_DeInit(USART_RegDef_t *pUSARTx);
 /*Interrupt configuration and interrupt flag status*/
 uint8_t USART_GetFlagStatus(USART_RegDef_t *pUSARTx, uint32_t FlagName);
 void USART_ReadStatusFlag(USART_RegDef_t *pUSARTx);
-void USART_EndTransmit(USART_Handle_t *pUSARTHandle);
-void USART_TransmitReady(USART_Handle_t *pUSARTHandle);
+
+
 void USART_ITCntrl(USART_RegDef_t *pUSARTx,uint8_t interrupt ,uint8_t EnOrDi);
 void USART_IRQHandling(USART_Handle_t *pUSARTHandle);
 void USART_IRQITConfig(uint8_t IRQNumber,uint8_t EnOrDi);
